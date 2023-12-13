@@ -90,29 +90,20 @@ class Graph:
         count = 1
         for i in range(self._nodes):
             for j in range(self._nodes):
-                if self._amatrix[i][j] != 0:
-                    edgeName = ""
-                    if self._amatrix[i][j] > 1:
-                        for k in range(self._amatrix[i][j] - 1):
-                            edgeName += f"{count}, "
-                            count += 1
-                        edgeName += f"{count}"
-                        count += 1
+                if self._weightMatrix[i][j] != 0 and self._weightMatrix[i][j] != math.inf:
+                    edgeName = ''
+                    if self._weightMatrix[j][i] != 0 and self._weightMatrix[j][i] != math.inf:
+                        edgeName = f"{self._weightMatrix[j][i]} ({chr(j + AINDEX)} -> {chr(i + AINDEX)})\n\n{self._weightMatrix[i][j]} ({chr(i + AINDEX)} -> {chr(j + AINDEX)})"
                     else:
-                        edgeName = f"{count}"
-                        count += 1
-                    if i == j:
-                        edgeName += "\n\n"
-                        loopMap.update({(chr(AINDEX + i), chr(AINDEX + j)): edgeName})
-                    else:
-                        edgeMap.update({(chr(AINDEX + i), chr(AINDEX + j)): edgeName})
+                        edgeName = f"{self._weightMatrix[i][j]}"
+                    edgeMap.update({(chr(AINDEX + i), chr(AINDEX + j)): edgeName})
         
-        G = nx.Graph(np.array(self._amatrix))
+        G = nx.DiGraph(np.array(self._amatrix))
         nx.relabel_nodes(G, nodeMap, False)
         pos = nx.circular_layout(G)
         nx.draw(G, pos, with_labels = True, arrows = True, arrowstyle = '-|>')
         nx.draw_networkx_edge_labels(G, pos, edge_labels = edgeMap)
-        nx.draw_networkx_edge_labels(G, pos, edge_labels = loopMap)
+        #nx.draw_networkx_edge_labels(G, pos, edge_labels = loopMap)
         plt.show()
 
     # Заполнение таблицы смежности при помощи рандома
@@ -210,52 +201,59 @@ class Graph:
                     print(end = " ")
             print()
     
-    def DijkstraAlgorithm(self, start, end):
-        self._dijkstraMatrix = MakeMatrix(self._nodes)
-        mask = ''
-        for k in range(self._nodes):
-            mask += chr(AINDEX + k)
-
-        currentNode = ord(start) - AINDEX
+    def DijkstraAlgorithm(self):
+        self._dijkstraMatrix = list()
         for i in range(self._nodes):
-            print(currentNode)
-            if i == 0:
-                for j in range(self._nodes):
-                    self._dijkstraMatrix[i][j] = self._weightMatrix[currentNode][j]
-            else:
-                for j in range(self._nodes):
-                    if self._dijkstraMatrix[i-1][j] > self._dijkstraMatrix[ord(start) - AINDEX][currentNode] + self._weightMatrix[currentNode][j]:
-                        self._dijkstraMatrix[i][j] = self._dijkstraMatrix[ord(start) - AINDEX][currentNode] + self._weightMatrix[currentNode][j]
-                    else:
-                        self._dijkstraMatrix[i][j] = self._dijkstraMatrix[i-1][j]
+            self._dijkstraMatrix.append(MakeMatrix(self._nodes))
+        
+        for l in range(self._nodes):
+            mask = ''
+            for k in range(self._nodes):
+                mask += chr(AINDEX + k)
 
-            temp = ''
-            for k in range(len(mask)):
-                temp += mask[k] if mask[k] != chr(currentNode + AINDEX) else ''
-            mask = temp
-
-            minimum = math.inf
-            for j in range(self._nodes):
-                if chr(AINDEX + j) in mask:
-                    if minimum > self._dijkstraMatrix[i][j]:
-                        minimum = self._dijkstraMatrix[i][j]
-                        currentNode = j
-    
-    def ShowDijkstra(self):
-        print("Матрица Дейкстры: ")
-        for i in range(self._nodes * 2 + 1):
-            for j in range(self._nodes * 2 + 1):
-                if j % 2 == 1:
-                    print(end = "  ") # |
-                elif i % 2 == 1:
-                    print(end = " ") # -
-                elif (i == 0 and j != 0) or (j == 0 and i != 0):
-                    print(end = f"{chr(AINDEX + (i + j) // 2 - 1)}")
-                elif i // 2 > 0 and j // 2 > 0:
-                    print(end = f"{self._dijkstraMatrix[i // 2 - 1][j // 2 - 1]}")
+            currentNode = l
+            for i in range(self._nodes):
+                #print(currentNode)
+                if i == 0:
+                    for j in range(self._nodes):
+                        self._dijkstraMatrix[l][i][j] = self._weightMatrix[currentNode][j]
                 else:
-                    print(end = " ")
-            print()
+                    for j in range(self._nodes):
+                        if self._dijkstraMatrix[l][i-1][j] > self._dijkstraMatrix[l][i - 1][currentNode] + self._weightMatrix[currentNode][j]:
+                            self._dijkstraMatrix[l][i][j] = self._dijkstraMatrix[l][i - 1][currentNode] + self._weightMatrix[currentNode][j]
+                        else:
+                            self._dijkstraMatrix[l][i][j] = self._dijkstraMatrix[l][i-1][j]
+
+                temp = ''
+                for k in range(len(mask)):
+                    temp += mask[k] if mask[k] != chr(currentNode + AINDEX) else ''
+                mask = temp
+
+                minimum = math.inf
+                for j in range(self._nodes):
+                    if chr(AINDEX + j) in mask:
+                        if minimum > self._dijkstraMatrix[l][i][j]:
+                            minimum = self._dijkstraMatrix[l][i][j]
+                            currentNode = j
+
+    def ShowDijkstra(self):
+        for l in range(self._nodes):
+            print(f"Матрица Дейкстры из вершины {chr(l + AINDEX)}: ")
+            for i in range(self._nodes * 2 + 1):
+                for j in range(self._nodes * 2 + 1):
+                    if j % 2 == 1:
+                        print(end = "   ") # |
+                    elif i % 2 == 1:
+                        print(end = " ") # -
+                    elif (i == 0 and j != 0) or (j == 0 and i != 0):
+                        print(end = f"{chr(AINDEX + (i + j) // 2 - 1)}")
+                    elif i // 2 > 0 and j // 2 > 0:
+                        if self._dijkstraMatrix[i // 2 - 1][j // 2 - 1] == math.inf:
+                            print(end = "\b")
+                        print(end = f"{self._dijkstraMatrix[l][i // 2 - 1][j // 2 - 1]}")
+                    else:
+                        print(end = " ")
+                print()
 
             
             
@@ -292,12 +290,12 @@ def main():
         graph.showIncidenceMatrix()
         graph.MakeWeightMatrix()
         graph.showWeightMatrix()
-        graph.DijkstraAlgorithm('a', 'f')
+        graph.DijkstraAlgorithm()
         graph.ShowDijkstra()
         graph.showGraph()
-        os.system("clear")
+        if os.system("clear"): os.system("cls")
         mode = input(menu)
-    os.system("clear")
+    if os.system("clear"): os.system("cls")
 
 
 if __name__ == "__main__":
